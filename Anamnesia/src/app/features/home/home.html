@@ -1,0 +1,274 @@
+<div class="anamnesis-page">
+
+  <!-- HEADER -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <img src="/logo_anamnesia.png" alt="AnamnesIA">
+      </div>
+
+      <div>
+        <h1>AnamnesIA</h1>
+        <p>Simulación de anamnesis cardiovascular</p>
+      </div>
+    </div>
+
+    <div class="case-info">
+      <span class="case-label">CASO</span>
+      <span class="case-number">#04</span>
+
+      <div class="divider"></div>
+
+      <span class="timer">{{ formattedTime }}</span>
+    </div>
+  </header>
+
+
+  <!-- MAIN -->
+  <main class="simulation">
+
+    <!-- LEFT: AVATAR -->
+    <section class="patient-panel">
+
+      <div class="patient-header">
+        <div>
+          <span class="section-label">PACIENTE VIRTUAL</span>
+          <h2>{{ patient.name }}</h2>
+        </div>
+
+        <div class="online-status">
+          <span class="status-dot"></span>
+          En consulta
+        </div>
+      </div>
+
+
+      <!-- AVATAR -->
+      <div class="avatar-container">
+
+        <div class="avatar-background"></div>
+
+        <!-- Por ahora usamos placeholder.
+             Aquí después irá el avatar en tiempo real -->
+        <div class="avatar-placeholder">
+
+          <div class="avatar-face">
+            <div class="eyes">
+              <span></span>
+              <span></span>
+            </div>
+
+            <div class="nose"></div>
+            <div class="mouth"></div>
+          </div>
+
+          <div class="avatar-body"></div>
+
+        </div>
+
+
+        <!-- Speaking indicator -->
+        @if (isPatientSpeaking) {
+          <div class="speaking-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        }
+
+      </div>
+
+
+      <!-- PATIENT INFO -->
+      <div class="patient-info">
+
+        <div class="patient-data">
+          <span class="label">Edad</span>
+          <strong>{{ patient.age }} años</strong>
+        </div>
+
+        <div class="patient-data">
+          <span class="label">Sexo</span>
+          <strong>{{ patient.sex }}</strong>
+        </div>
+
+        <div class="patient-data">
+          <span class="label">Motivo</span>
+          <strong>{{ patient.chiefComplaint }}</strong>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- RIGHT: CONVERSATION -->
+    <section class="conversation-panel">
+
+      <!-- Conversation header -->
+      <div class="conversation-header">
+
+        <div>
+          <span class="section-label">ANAMNESIS</span>
+          <h2>Conversación</h2>
+        </div>
+
+        <button
+          class="end-button"
+          type="button"
+          (click)="endConsultation()">
+
+          <span class="end-icon">■</span>
+          Finalizar
+
+        </button>
+
+      </div>
+
+
+      <!-- TRANSCRIPT -->
+      <div class="transcript" #transcriptContainer>
+
+        @for (message of messages; track message.id) {
+
+          <div
+            class="message"
+            [class.student-message]="message.sender === 'student'"
+            [class.patient-message]="message.sender === 'patient'">
+
+            <div class="message-avatar">
+
+              @if (message.sender === 'student') {
+                <span>ME</span>
+              } @else {
+                <span>PA</span>
+              }
+
+            </div>
+
+            <div class="message-content">
+
+              <span class="message-author">
+                {{ message.sender === 'student' ? 'Tú' : patient.name }}
+              </span>
+
+              <p>{{ message.text }}</p>
+
+              <span class="message-time">
+                {{ message.time }}
+              </span>
+
+            </div>
+
+          </div>
+
+        }
+
+        <!-- Processing state -->
+        @if (isProcessing) {
+
+          <div class="typing-indicator">
+
+            <div class="message-avatar patient-avatar">
+              PA
+            </div>
+
+            <div class="typing-bubble">
+
+              <span></span>
+              <span></span>
+              <span></span>
+
+            </div>
+
+          </div>
+
+        }
+
+      </div>
+
+
+      <!-- CURRENT CAPTION -->
+      <div class="caption-container">
+
+        <span class="caption-label">
+          SUBTÍTULOS
+        </span>
+
+        <p>
+          {{ currentCaption }}
+        </p>
+
+      </div>
+
+
+      <!-- INPUT AREA -->
+      <div class="input-section">
+
+        <div class="input-wrapper">
+
+          <button
+            type="button"
+            class="mic-button"
+            [class.recording]="isRecording"
+            (click)="toggleRecording()">
+
+            @if (isRecording) {
+              <span class="recording-icon"></span>
+            } @else {
+              <span class="mic-icon">🎙</span>
+            }
+
+          </button>
+
+
+          <input
+            type="text"
+            [(ngModel)]="userInput"
+            (keyup.enter)="sendMessage()"
+            placeholder="Escribe tu pregunta..."
+            [disabled]="isRecording"
+          />
+
+
+          <button
+            type="button"
+            class="send-button"
+            (click)="sendMessage()"
+            [disabled]="!userInput.trim()">
+
+            ↑
+
+          </button>
+
+        </div>
+
+
+        <div class="input-options">
+
+          <button
+            type="button"
+            class="input-option"
+            (click)="toggleRecording()">
+
+            🎙
+            {{ isRecording ? 'Detener grabación' : 'Hablar' }}
+
+          </button>
+
+          <span class="separator">o</span>
+
+          <span class="keyboard-hint">
+            Escribe y presiona Enter
+          </span>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+</div>

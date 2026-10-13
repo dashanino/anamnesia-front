@@ -1,0 +1,1180 @@
+:host {
+  display: block;
+  height: 100vh;
+}
+
+
+* {
+  box-sizing: border-box;
+}
+
+
+.anamnesis-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+
+  background: #f5f7fa;
+  color: #17202a;
+
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+
+// ============================================================
+// TOPBAR
+// ============================================================
+
+.topbar {
+
+  height: 76px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 32px;
+
+  background: #ffffff;
+
+  border-bottom: 1px solid #e5e9ef;
+}
+
+
+.brand {
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+
+  h1 {
+    margin: 0;
+
+    font-size: 18px;
+    font-weight: 700;
+
+    letter-spacing: -0.3px;
+  }
+
+
+  p {
+    margin: 2px 0 0;
+
+    font-size: 12px;
+    color: #7b8794;
+  }
+
+}
+
+
+.brand-icon img {
+
+  width: 75px;
+  height: 60px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background: #eaf3ff;
+
+  font-size: 19px;
+}
+
+
+.case-info {
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  font-size: 13px;
+}
+
+
+.case-label {
+
+  color: #8a96a3;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: 1px;
+}
+
+
+.case-number {
+
+  font-weight: 700;
+}
+
+
+.divider {
+
+  width: 1px;
+  height: 20px;
+
+  background: #e1e5ea;
+
+  margin: 0 8px;
+}
+
+
+.timer {
+
+  font-family: monospace;
+
+  font-size: 13px;
+
+  color: #5f6b78;
+}
+
+
+// ============================================================
+// MAIN
+// ============================================================
+
+.simulation {
+
+  flex: 1;
+
+  display: grid;
+
+  grid-template-columns: minmax(420px, 0.9fr) minmax(500px, 1.1fr);
+
+  gap: 18px;
+
+  padding: 18px;
+
+  min-height: 0;
+}
+
+
+// ============================================================
+// PATIENT PANEL
+// ============================================================
+
+.patient-panel {
+
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  background: #ffffff;
+
+  border: 1px solid #e4e8ed;
+
+  border-radius: 18px;
+}
+
+
+.patient-header {
+
+  height: 76px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 24px;
+
+  border-bottom: 1px solid #edf0f3;
+
+
+  h2 {
+
+    margin: 4px 0 0;
+
+    font-size: 20px;
+    font-weight: 650;
+
+  }
+
+}
+
+
+.section-label {
+
+  font-size: 10px;
+
+  font-weight: 700;
+
+  letter-spacing: 1.1px;
+
+  color: #8b97a4;
+}
+
+
+.online-status {
+
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  font-size: 12px;
+
+  color: #5d6875;
+}
+
+
+.status-dot {
+
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: #3dbb76;
+}
+
+
+// ============================================================
+// AVATAR
+// ============================================================
+
+.avatar-container {
+
+  position: relative;
+
+  flex: 1;
+
+  min-height: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      circle at 50% 35%,
+      #eef5fb 0%,
+      #f7f9fb 50%,
+      #ffffff 100%
+    );
+}
+
+
+.avatar-background {
+
+  position: absolute;
+
+  width: 340px;
+  height: 340px;
+
+  border-radius: 50%;
+
+  background: #edf4fa;
+
+  opacity: 0.8;
+}
+
+
+// ============================================================
+// TEMPORARY AVATAR
+// Replace this later with actual avatar
+// ============================================================
+
+.avatar-placeholder {
+
+  position: relative;
+
+  width: 250px;
+  height: 360px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  z-index: 2;
+}
+
+
+.avatar-face {
+
+  position: relative;
+
+  width: 150px;
+  height: 180px;
+
+  margin-top: 30px;
+
+  border-radius:
+    48%
+    48%
+    45%
+    45%;
+
+  background: #e9c4a9;
+
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+
+.eyes {
+
+  position: absolute;
+
+  top: 72px;
+  left: 30px;
+  right: 30px;
+
+  display: flex;
+  justify-content: space-between;
+
+
+  span {
+
+    width: 11px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: #263238;
+
+  }
+
+}
+
+
+.nose {
+
+  position: absolute;
+
+  top: 91px;
+  left: 70px;
+
+  width: 10px;
+  height: 24px;
+
+  border-right: 1px solid rgba(80, 50, 40, 0.3);
+}
+
+
+.mouth {
+
+  position: absolute;
+
+  bottom: 38px;
+  left: 62px;
+
+  width: 26px;
+  height: 9px;
+
+  border-bottom: 2px solid #814e4e;
+
+  border-radius: 0 0 50% 50%;
+}
+
+
+.avatar-body {
+
+  width: 245px;
+  height: 180px;
+
+  margin-top: -5px;
+
+  border-radius:
+    110px
+    110px
+    20px
+    20px;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e8eb;
+
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.06);
+}
+
+
+// ============================================================
+// SPEAKING INDICATOR
+// ============================================================
+
+.speaking-indicator {
+
+  position: absolute;
+
+  bottom: 25px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 4px;
+
+  padding: 9px 13px;
+
+  border-radius: 20px;
+
+  background: rgba(255, 255, 255, 0.9);
+
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.08);
+
+
+  span {
+
+    width: 4px;
+    height: 14px;
+
+    border-radius: 3px;
+
+    background: #2878d4;
+
+    animation: voiceWave 0.8s infinite ease-in-out;
+
+  }
+
+
+  span:nth-child(2) {
+    animation-delay: 0.1s;
+  }
+
+  span:nth-child(3) {
+    animation-delay: 0.2s;
+  }
+
+  span:nth-child(4) {
+    animation-delay: 0.3s;
+  }
+
+}
+
+
+@keyframes voiceWave {
+
+  0%,
+  100% {
+    transform: scaleY(0.5);
+  }
+
+  50% {
+    transform: scaleY(1.3);
+  }
+
+}
+
+
+// ============================================================
+// PATIENT INFO
+// ============================================================
+
+.patient-info {
+
+  display: grid;
+
+  grid-template-columns: 0.7fr 0.7fr 1.4fr;
+
+  gap: 1px;
+
+  background: #e9edf1;
+
+  border-top: 1px solid #e9edf1;
+}
+
+
+.patient-data {
+
+  padding: 15px 18px;
+
+  background: #ffffff;
+
+
+  .label {
+
+    display: block;
+
+    margin-bottom: 4px;
+
+    font-size: 10px;
+
+    color: #8b96a2;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.7px;
+
+  }
+
+
+  strong {
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+  }
+
+}
+
+
+// ============================================================
+// CONVERSATION PANEL
+// ============================================================
+
+.conversation-panel {
+
+  display: flex;
+  flex-direction: column;
+
+  min-height: 0;
+
+  background: #ffffff;
+
+  border: 1px solid #e4e8ed;
+
+  border-radius: 18px;
+
+  overflow: hidden;
+}
+
+
+.conversation-header {
+
+  height: 76px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 24px;
+
+  border-bottom: 1px solid #edf0f3;
+
+
+  h2 {
+
+    margin: 4px 0 0;
+
+    font-size: 20px;
+
+    font-weight: 650;
+
+  }
+
+}
+
+
+// ============================================================
+// END BUTTON
+// ============================================================
+
+.end-button {
+
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  padding: 9px 13px;
+
+  border: 1px solid #e2e6ea;
+
+  border-radius: 8px;
+
+  background: #ffffff;
+
+  color: #687582;
+
+  font-size: 12px;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+
+
+  &:hover {
+
+    border-color: #d1d7dd;
+
+    background: #f8f9fa;
+
+  }
+
+}
+
+
+.end-icon {
+
+  font-size: 8px;
+
+  color: #d65a5a;
+}
+
+
+// ============================================================
+// TRANSCRIPT
+// ============================================================
+
+.transcript {
+
+  flex: 1;
+
+  min-height: 0;
+
+  overflow-y: auto;
+
+  padding: 25px;
+
+
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+
+
+  &::-webkit-scrollbar-thumb {
+
+    background: #dce1e6;
+
+    border-radius: 10px;
+
+  }
+
+}
+
+
+// ============================================================
+// MESSAGE
+// ============================================================
+
+.message {
+
+  display: flex;
+
+  gap: 12px;
+
+  margin-bottom: 24px;
+
+  max-width: 90%;
+}
+
+
+.message-avatar {
+
+  flex-shrink: 0;
+
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: #eaf3ff;
+
+  color: #2878d4;
+
+  font-size: 10px;
+
+  font-weight: 700;
+}
+
+
+.message-content {
+
+  flex: 1;
+
+
+  p {
+
+    margin: 5px 0 4px;
+
+    color: #313c47;
+
+    font-size: 14px;
+
+    line-height: 1.55;
+
+  }
+
+}
+
+
+.message-author {
+
+  font-size: 11px;
+
+  font-weight: 700;
+
+  color: #6e7b88;
+}
+
+
+.message-time {
+
+  font-size: 10px;
+
+  color: #a0a9b2;
+}
+
+
+// ============================================================
+// STUDENT MESSAGE
+// ============================================================
+
+.student-message {
+
+  margin-left: auto;
+
+  flex-direction: row-reverse;
+
+  text-align: right;
+
+
+  .message-avatar {
+
+    background: #eef0f3;
+
+    color: #66717d;
+
+  }
+
+}
+
+
+// ============================================================
+// PATIENT MESSAGE
+// ============================================================
+
+.patient-message {
+
+  margin-right: auto;
+}
+
+
+// ============================================================
+// TYPING
+// ============================================================
+
+.typing-indicator {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  margin-bottom: 20px;
+}
+
+
+.patient-avatar {
+
+  background: #eaf3ff;
+
+}
+
+
+.typing-bubble {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 4px;
+
+  padding: 10px 13px;
+
+  border-radius: 12px;
+
+  background: #f1f4f7;
+
+
+  span {
+
+    width: 5px;
+    height: 5px;
+
+    border-radius: 50%;
+
+    background: #8d99a6;
+
+    animation: typing 1.2s infinite;
+
+  }
+
+
+  span:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+
+  span:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+}
+
+
+@keyframes typing {
+
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+
+}
+
+
+// ============================================================
+// CAPTIONS
+// ============================================================
+
+.caption-container {
+
+  flex-shrink: 0;
+
+  margin: 0 24px 15px;
+
+  padding: 13px 16px;
+
+  border-radius: 10px;
+
+  background: #f5f7f9;
+
+  border: 1px solid #e8ecf0;
+
+
+  .caption-label {
+
+    display: block;
+
+    margin-bottom: 5px;
+
+    font-size: 9px;
+
+    font-weight: 700;
+
+    letter-spacing: 1px;
+
+    color: #8a96a2;
+
+  }
+
+
+  p {
+
+    margin: 0;
+
+    font-size: 13px;
+
+    line-height: 1.45;
+
+    color: #485461;
+
+  }
+
+}
+
+
+// ============================================================
+// INPUT
+// ============================================================
+
+.input-section {
+
+  flex-shrink: 0;
+
+  padding: 0 24px 20px;
+
+}
+
+
+.input-wrapper {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 7px;
+
+  border: 1px solid #dfe4e9;
+
+  border-radius: 12px;
+
+  background: #ffffff;
+
+  transition: 0.2s;
+
+
+  &:focus-within {
+
+    border-color: #9cbfe2;
+
+    box-shadow:
+      0 0 0 3px rgba(40, 120, 212, 0.08);
+
+  }
+
+
+  input {
+
+    flex: 1;
+
+    min-width: 0;
+
+    border: none;
+
+    outline: none;
+
+    background: transparent;
+
+    font-size: 13px;
+
+    color: #29333d;
+
+
+    &::placeholder {
+
+      color: #a0a9b2;
+
+    }
+
+  }
+
+}
+
+
+// ============================================================
+// MIC
+// ============================================================
+
+.mic-button {
+
+  width: 38px;
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+
+  border-radius: 9px;
+
+  background: #eef4fa;
+
+  color: #2878d4;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+
+
+  &:hover {
+
+    background: #e2edf8;
+
+  }
+
+
+  &.recording {
+
+    background: #fceaea;
+
+    color: #d85656;
+
+  }
+
+}
+
+
+.mic-icon {
+
+  font-size: 17px;
+
+}
+
+
+.recording-icon {
+
+  width: 10px;
+  height: 10px;
+
+  border-radius: 3px;
+
+  background: #d85656;
+
+}
+
+
+// ============================================================
+// SEND
+// ============================================================
+
+.send-button {
+
+  width: 35px;
+  height: 35px;
+
+  border: none;
+
+  border-radius: 8px;
+
+  background: #2878d4;
+
+  color: #ffffff;
+
+  font-size: 18px;
+
+  cursor: pointer;
+
+
+  &:disabled {
+
+    opacity: 0.35;
+
+    cursor: default;
+
+  }
+
+}
+
+
+// ============================================================
+// INPUT OPTIONS
+// ============================================================
+
+.input-options {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  margin-top: 8px;
+
+  font-size: 10px;
+
+  color: #929da8;
+}
+
+
+.input-option {
+
+  padding: 0;
+
+  border: none;
+
+  background: none;
+
+  color: #687582;
+
+  font-size: 11px;
+
+  cursor: pointer;
+
+
+  &:hover {
+
+    color: #2878d4;
+
+  }
+
+}
+
+
+.separator {
+
+  color: #c3c9cf;
+
+}
+
+
+.keyboard-hint {
+
+  color: #a0a9b2;
+
+}
+
+
+// ============================================================
+// RESPONSIVE
+// ============================================================
+
+@media (max-width: 1000px) {
+
+  .simulation {
+
+    grid-template-columns: 1fr;
+
+  }
+
+
+  .patient-panel {
+
+    min-height: 500px;
+
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .topbar {
+
+    padding: 0 16px;
+
+  }
+
+
+  .case-info {
+
+    display: none;
+
+  }
+
+
+  .simulation {
+
+    padding: 10px;
+
+  }
+
+
+  .patient-info {
+
+    grid-template-columns: 1fr 1fr;
+
+  }
+
+
+  .patient-data:last-child {
+
+    grid-column: 1 / -1;
+
+  }
+
+}
