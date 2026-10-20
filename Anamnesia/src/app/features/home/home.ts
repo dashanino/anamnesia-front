@@ -1,7 +1,13 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import DailyIframe from '@daily-co/daily-js';
+
+// ==========================================================
+// INTERFACES
+// ==========================================================
 
 interface Patient {
   name: string;
@@ -17,6 +23,10 @@ interface Message {
   time: string;
 }
 
+// ==========================================================
+// COMPONENT
+// ==========================================================
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -25,9 +35,16 @@ interface Message {
   styleUrl: './home.scss',
 })
 export class Home implements OnInit, OnDestroy {
+  // ==========================================================
+  // TAVUS
+  // ==========================================================
+
   conversationId: string | null = null;
   conversationUrl: SafeResourceUrl | null = null;
   isLoadingLucy = false;
+
+  private dailyCall: ReturnType<typeof DailyIframe.createFrame> | null = null;
+  private pendingDailyUrl: string | null = null;
 
   constructor(
     private http: HttpClient,
@@ -35,8 +52,32 @@ export class Home implements OnInit, OnDestroy {
   ) {}
 
   // ==========================================================
+  // DAILY CONTAINER
+  // ==========================================================
+
+  @ViewChild('dailyContainer')
+  set dailyContainer(
+    element: ElementRef<HTMLDivElement> | undefined
+  ) {
+    console.log('Contenedor Daily detectado:', !!element);
+    console.log('URL pendiente:', this.pendingDailyUrl);
+
+  if (element && this.pendingDailyUrl) {
+    const url = this.pendingDailyUrl;
+
+    this.pendingDailyUrl = null;
+
+    console.log('Iniciando Daily...');
+    this.iniciarDaily(url, element.nativeElement);
+  }
+}
+
+  // ==========================================================
   // PATIENT
   // ==========================================================
+
+  // Datos temporales de la interfaz.
+  // Después se reemplazarán por datos del backend.
 
   patient: Patient = {
     name: 'Lucy',
@@ -49,14 +90,10 @@ export class Home implements OnInit, OnDestroy {
   // CONVERSATION
   // ==========================================================
 
-  messages: Message[] = [
-    {
-      id: 1,
-      sender: 'patient',
-      text: 'Buenos días... desde esta mañana tengo un dolor en el pecho.',
-      time: '10:21 AM',
-    },
-  ];
+  // El historial empieza vacío para no mostrar
+  // respuestas ficticias antes de la entrevista.
+
+  messages: Message[] = [];
 
   // ==========================================================
   // USER INPUT
@@ -68,20 +105,15 @@ export class Home implements OnInit, OnDestroy {
   // CLOSED CAPTIONS
   // ==========================================================
 
-  currentCaption: string = 'Buenos días... desde esta mañana tengo un dolor en el pecho.';
+  currentCaption: string = '';
 
   // ==========================================================
   // STATES
   // ==========================================================
 
-  // El estudiante está grabando
   isRecording: boolean = false;
-
-  // La IA está procesando la pregunta
   isProcessing: boolean = false;
-
-  // El paciente está hablando
-  isPatientSpeaking: boolean = true;
+  isPatientSpeaking: boolean = false;
 
   // ==========================================================
   // TIMER
@@ -102,6 +134,11 @@ export class Home implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
+    }
+
+    if (this.dailyCall) {
+      void this.dailyCall.destroy();
+      this.dailyCall = null;
     }
   }
 
@@ -137,8 +174,6 @@ export class Home implements OnInit, OnDestroy {
       return;
     }
 
-    // Agregar pregunta del estudiante
-
     this.messages.push({
       id: Date.now(),
       sender: 'student',
@@ -146,42 +181,10 @@ export class Home implements OnInit, OnDestroy {
       time: this.getCurrentTime(),
     });
 
-    // Limpiar input
-
     this.userInput = '';
 
-    // Por ahora simulamos la respuesta de la IA
-
-    this.simulatePatientResponse();
-  }
-
-  // ==========================================================
-  // SIMULATED PATIENT RESPONSE
-  // ==========================================================
-
-  private simulatePatientResponse(): void {
-    this.isProcessing = true;
-    this.isPatientSpeaking = false;
-
-    setTimeout(() => {
-      const response = 'El dolor empezó hace aproximadamente dos horas, mientras estaba caminando.';
-
-      this.messages.push({
-        id: Date.now(),
-        sender: 'patient',
-        text: response,
-        time: this.getCurrentTime(),
-      });
-
-      // Closed captions
-
-      this.currentCaption = response;
-
-      // Actualizar estados
-
-      this.isProcessing = false;
-      this.isPatientSpeaking = true;
-    }, 1800);
+    // Pendiente: conectar el envío de texto a Tavus.
+    // No generamos respuestas ficticias.
   }
 
   // ==========================================================
@@ -189,27 +192,14 @@ export class Home implements OnInit, OnDestroy {
   // ==========================================================
 
   toggleRecording(): void {
-    this.isRecording = !this.isRecording;
+    // El micrófono de Daily se controla dentro
+    // de la videollamada.
+    //
+    // Este botón aún no controla el micrófono real.
+    // Lo conectaremos cuando configuremos
+    // los eventos y permisos de Daily.
 
-    if (this.isRecording) {
-      console.log('🎙️ Recording started');
-
-      /*
-       * Aquí después conectaremos el STT.
-       *
-       * Ejemplo:
-       *
-       * microphone
-       *      ↓
-       * Speech-to-Text
-       *      ↓
-       * userInput
-       *      ↓
-       * sendMessage()
-       */
-    } else {
-      console.log('⏹️ Recording stopped');
-    }
+    console.log('Control del micrófono pendiente de integración');
   }
 
   // ==========================================================
@@ -223,17 +213,11 @@ export class Home implements OnInit, OnDestroy {
       return;
     }
 
-    console.log('Consultation finished');
+    // Pendiente: llamar al endpoint de Flask
+    // para finalizar la conversación en Tavus
+    // y actualizar la simulación en PostgreSQL.
 
-    /*
-     * Después aquí podemos:
-     *
-     * 1. Guardar la conversación
-     * 2. Mandarla al backend
-     * 3. Evaluar la anamnesis
-     * 4. Calcular la puntuación
-     * 5. Generar feedback
-     */
+    console.log('Finalización pendiente de integración');
   }
 
   // ==========================================================
@@ -246,6 +230,11 @@ export class Home implements OnInit, OnDestroy {
       minute: '2-digit',
     });
   }
+
+  // ==========================================================
+  // CREATE TAVUS CONVERSATION
+  // ==========================================================
+
   iniciarSimulacion(): void {
     if (this.isLoadingLucy || this.conversationId) {
       return;
@@ -272,6 +261,14 @@ export class Home implements OnInit, OnDestroy {
 
             this.conversationId = response.conversation_id;
 
+            // Guardamos la URL hasta que Angular
+            // cree el contenedor de Daily.
+
+            this.pendingDailyUrl = url.toString();
+
+            // Esta asignación activa
+            // @if (conversationUrl) en home.html.
+
             this.conversationUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url.toString());
           } catch (error) {
             console.error('Error al preparar la URL:', error);
@@ -279,10 +276,44 @@ export class Home implements OnInit, OnDestroy {
             this.isLoadingLucy = false;
           }
         },
+
         error: (error) => {
           console.error('Error al iniciar Lucy:', error);
+
           this.isLoadingLucy = false;
         },
       });
+  }
+
+  // ==========================================================
+  // DAILY VIDEO CALL
+  // ==========================================================
+
+  private iniciarDaily(url: string, container: HTMLDivElement): void {
+    if (this.dailyCall) {
+      return;
+    }
+
+    try {
+      this.dailyCall = DailyIframe.createFrame(container, {
+        iframeStyle: {
+          width: '100%',
+          height: '100%',
+          border: '0',
+        },
+        showLeaveButton: false,
+      });
+
+      this.dailyCall
+        .join({ url })
+        .then(() => {
+          console.log('Conexión con Daily establecida');
+        })
+        .catch((error) => {
+          console.error('Error al conectar Daily:', error);
+        });
+    } catch (error) {
+      console.error('Error al crear Daily:', error);
+    }
   }
 }

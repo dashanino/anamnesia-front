@@ -48,13 +48,11 @@
 
         @if (conversationUrl) {
 
-          <iframe
+          <div
+            #dailyContainer
             class="tavus-video"
-            [src]="conversationUrl"
-            title="Lucy - Paciente virtual"
-            allow="microphone; camera; autoplay; fullscreen"
-            allowfullscreen>
-          </iframe>
+            aria-label="Videollamada con Lucy">
+          </div>
 
         } @else {
 
