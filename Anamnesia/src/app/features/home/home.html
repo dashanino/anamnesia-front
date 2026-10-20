@@ -43,42 +43,39 @@
       </div>
 
 
-      <!-- AVATAR -->
+                <!-- AVATAR -->
       <div class="avatar-container">
 
-        <div class="avatar-background"></div>
+        @if (conversationUrl) {
 
-        <!-- Por ahora usamos placeholder.
-             Aquí después irá el avatar en tiempo real -->
-        <div class="avatar-placeholder">
+          <iframe
+            class="tavus-video"
+            [src]="conversationUrl"
+            title="Lucy - Paciente virtual"
+            allow="microphone; camera; autoplay; fullscreen"
+            allowfullscreen>
+          </iframe>
 
-          <div class="avatar-face">
-            <div class="eyes">
-              <span></span>
-              <span></span>
-            </div>
+        } @else {
 
-            <div class="nose"></div>
-            <div class="mouth"></div>
+          <div class="avatar-loading">
+            <p>Lucy está lista para iniciar.</p>
+
+            <button
+              type="button"
+              (click)="iniciarSimulacion()"
+              [disabled]="isLoadingLucy">
+
+              {{ isLoadingLucy ? 'Preparando...' : 'Iniciar simulación' }}
+
+            </button>
           </div>
 
-          <div class="avatar-body"></div>
-
-        </div>
-
-
-        <!-- Speaking indicator -->
-        @if (isPatientSpeaking) {
-          <div class="speaking-indicator">
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
         }
 
       </div>
 
+<!-- PATIENT INFO -->
 
       <!-- PATIENT INFO -->
       <div class="patient-info">
