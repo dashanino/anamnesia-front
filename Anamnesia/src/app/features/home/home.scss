@@ -237,7 +237,11 @@
 
   border-radius: 50%;
 
-  background: #3dbb76;
+  background: #8b97a4;
+
+  &.connected {
+    background: #3dbb76;
+  }
 }
 
 
@@ -1206,4 +1210,25 @@
       cursor: not-allowed;
     }
   }
+}
+
+.session-message {
+  padding: 12px 20px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.session-error {
+  color: #9b2323;
+  background: #fff0f0;
+}
+
+.session-notice {
+  color: #205b3a;
+  background: #edf8f0;
+}
+
+.end-button:disabled {
+  opacity: 0.55;
+  cursor: default;
 }

@@ -37,13 +37,20 @@
         </div>
 
         <div class="online-status">
-          <span class="status-dot"></span>
-          En consulta
+          <span class="status-dot" [class.connected]="isJoined"></span>
+          {{ sessionStatus }}
         </div>
       </div>
 
 
                 <!-- AVATAR -->
+      @if (errorMessage) {
+        <div class="session-message session-error" role="alert">{{ errorMessage }}</div>
+      }
+      @if (noticeMessage) {
+        <div class="session-message session-notice" role="status">{{ noticeMessage }}</div>
+      }
+
       <div class="avatar-container">
 
         @if (conversationUrl) {
@@ -62,7 +69,7 @@
             <button
               type="button"
               (click)="iniciarSimulacion()"
-              [disabled]="isLoadingLucy">
+              [disabled]="isLoadingLucy || isEndingLucy || !!conversationId">
 
               {{ isLoadingLucy ? 'Preparando...' : 'Iniciar simulación' }}
 
@@ -112,10 +119,11 @@
         <button
           class="end-button"
           type="button"
-          (click)="endConsultation()">
+          (click)="endConsultation()"
+          [disabled]="!conversationId || isLoadingLucy || isEndingLucy">
 
           <span class="end-icon">■</span>
-          Finalizar
+          {{ isEndingLucy ? 'Finalizando...' : 'Finalizar' }}
 
         </button>
 

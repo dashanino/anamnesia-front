@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, ViewChild, inject } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -34,7 +34,9 @@ interface Message {
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
-export class Home implements OnInit, OnDestroy {
+export class Home implements OnDestroy {
+  private readonly cdr = inject(ChangeDetectorRef);
+
   // ==========================================================
   // TAVUS
   // ==========================================================
@@ -42,6 +44,15 @@ export class Home implements OnInit, OnDestroy {
   conversationId: string | null = null;
   conversationUrl: SafeResourceUrl | null = null;
   isLoadingLucy = false;
+  isEndingLucy = false;
+  isJoined = false;
+  sessionStatus = 'Lista para iniciar';
+  errorMessage = '';
+  noticeMessage = '';
+
+  private destroyed = false;
+  private readonly cierresAlSalir = new Set<string>();
+  private readonly apiBase = 'http://127.0.0.1:3000/api/tavus/conversation';
 
   private dailyCall: ReturnType<typeof DailyIframe.createFrame> | null = null;
   private pendingDailyUrl: string | null = null;
@@ -127,19 +138,39 @@ export class Home implements OnInit, OnDestroy {
   // LIFECYCLE
   // ==========================================================
 
-  ngOnInit(): void {
-    this.startTimer();
+  ngOnDestroy(): void {
+    this.destroyed = true;
+    this.solicitarCierreAlSalir();
+    this.stopTimer();
+    const call = this.dailyCall;
+    this.dailyCall = null;
+    if (call) {
+      void call.destroy().catch(error => console.warn('Error al liberar Daily:', error));
+    }
   }
 
-  ngOnDestroy(): void {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-    }
+  @HostListener('window:pagehide')
+  onPageHide(): void {
+    // Es un intento de cierre; una pérdida de red puede impedir su entrega.
+    this.solicitarCierreAlSalir();
+  }
 
-    if (this.dailyCall) {
-      void this.dailyCall.destroy();
-      this.dailyCall = null;
-    }
+  private solicitarCierreAlSalir(id: string | null = this.conversationId): void {
+    if (!id || this.cierresAlSalir.has(id)) return;
+    this.cierresAlSalir.add(id);
+    void fetch(`${this.apiBase}/${encodeURIComponent(id)}/finalizar`, {
+      method: 'POST',
+      keepalive: true,
+    }).then(response => {
+      if (!response.ok) throw new Error(`Cierre no confirmado: HTTP ${response.status}`);
+    }).catch(error => {
+      this.cierresAlSalir.delete(id);
+      console.warn('No se pudo confirmar el cierre al salir:', error);
+    });
+  }
+
+  private refrescarVista(): void {
+    if (!this.destroyed) this.cdr.markForCheck();
   }
 
   // ==========================================================
@@ -147,9 +178,18 @@ export class Home implements OnInit, OnDestroy {
   // ==========================================================
 
   private startTimer(): void {
+    this.stopTimer();
     this.timerInterval = setInterval(() => {
       this.elapsedSeconds++;
+      this.refrescarVista();
     }, 1000);
+  }
+
+  private stopTimer(): void {
+    if (this.timerInterval !== undefined) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = undefined;
+    }
   }
 
   get formattedTime(): string {
@@ -207,17 +247,54 @@ export class Home implements OnInit, OnDestroy {
   // ==========================================================
 
   endConsultation(): void {
-    const confirmed = confirm('¿Quieres finalizar la anamnesis?');
+    if (!this.conversationId || this.isEndingLucy) return;
+    if (!confirm('¿Quieres finalizar la anamnesis?')) return;
 
-    if (!confirmed) {
-      return;
-    }
+    const id = this.conversationId;
+    this.isEndingLucy = true;
+    this.sessionStatus = 'Finalizando...';
+    this.errorMessage = '';
+    this.noticeMessage = '';
 
-    // Pendiente: llamar al endpoint de Flask
-    // para finalizar la conversación en Tavus
-    // y actualizar la simulación en PostgreSQL.
+    this.http.post<{ message?: string }>(
+      `${this.apiBase}/${encodeURIComponent(id)}/finalizar`, {}
+    ).subscribe({
+      next: response => {
+        // El backend respondió tras cerrar Tavus. Ahora libera la llamada local.
+        this.conversationId = null;
+        this.pendingDailyUrl = null;
+        this.stopTimer();
+        this.isJoined = false;
+        this.isRecording = false;
+        this.isProcessing = false;
+        this.isPatientSpeaking = false;
+        this.sessionStatus = 'Finalizada';
+        this.noticeMessage = response.message || 'Conversación finalizada correctamente';
+        const call = this.dailyCall;
+        this.dailyCall = null;
 
-    console.log('Finalización pendiente de integración');
+        void (async () => {
+          try {
+            if (call) await call.destroy();
+          } catch (error) {
+            // El cierre remoto ya se confirmó aunque falle la limpieza local.
+            console.warn('La sesión terminó, pero Daily no se pudo liberar:', error);
+          } finally {
+            this.conversationUrl = null;
+            this.isEndingLucy = false;
+            this.refrescarVista();
+          }
+        })();
+      },
+      error: error => {
+        console.error('No se pudo confirmar el cierre:', error);
+        this.isEndingLucy = false;
+        this.sessionStatus = 'Cierre pendiente';
+        this.errorMessage = 'No se pudo confirmar el cierre. Pulsa Finalizar para reintentar.';
+        // Mantiene el ID y la llamada para poder reintentar el cierre real.
+        this.refrescarVista();
+      },
+    });
   }
 
   // ==========================================================
@@ -236,30 +313,50 @@ export class Home implements OnInit, OnDestroy {
   // ==========================================================
 
   iniciarSimulacion(): void {
-    if (this.isLoadingLucy || this.conversationId) {
+    if (this.isLoadingLucy || this.isEndingLucy || this.conversationId) {
       return;
     }
 
     this.isLoadingLucy = true;
+    this.sessionStatus = 'Preparando...';
+    this.errorMessage = '';
+    this.noticeMessage = '';
+    this.elapsedSeconds = 0;
+    this.messages = [];
+    this.currentCaption = '';
+    this.cierresAlSalir.clear();
 
     this.http
       .post<{
         conversation_id: string;
         conversation_url: string;
         message: string;
-      }>('http://127.0.0.1:3000/api/tavus/conversation', {})
+        status?: string;
+        test_mode?: boolean;
+      }>(this.apiBase, {})
       .subscribe({
         next: (response) => {
           console.log('Respuesta de Tavus:', response);
+          if (this.destroyed) {
+            // Si el usuario salió mientras se creaba, cierra el ID recién recibido.
+            if (response.status !== 'ended') this.solicitarCierreAlSalir(response.conversation_id);
+            return;
+          }
 
           try {
+            if (response.status === 'ended' || response.test_mode === true) {
+              this.sessionStatus = 'Sin sesión activa';
+              this.noticeMessage = 'La conversación se creó finalizada. No hay una sesión activa.';
+              return;
+            }
+            this.conversationId = response.conversation_id;
             const url = new URL(response.conversation_url);
 
             if (url.protocol !== 'https:' || url.hostname !== 'tavus.daily.co') {
               throw new Error('URL de Tavus no permitida');
             }
 
-            this.conversationId = response.conversation_id;
+            this.sessionStatus = 'Esperando ingreso';
 
             // Guardamos la URL hasta que Angular
             // cree el contenedor de Daily.
@@ -272,15 +369,22 @@ export class Home implements OnInit, OnDestroy {
             this.conversationUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url.toString());
           } catch (error) {
             console.error('Error al preparar la URL:', error);
+            this.errorMessage = 'No se pudo abrir la videollamada. Finaliza la sesión antes de reintentar.';
           } finally {
             this.isLoadingLucy = false;
+            // Angular sin ZoneJS necesita una notificación tras el HTTP.
+            // Esto renderiza el @if y activa el ViewChild sin otro clic.
+            this.refrescarVista();
           }
         },
 
         error: (error) => {
           console.error('Error al iniciar Lucy:', error);
+          this.sessionStatus = 'Error al iniciar';
+          this.errorMessage = error.error?.message || error.error?.error || 'No se pudo iniciar la conversación.';
 
           this.isLoadingLucy = false;
+          this.refrescarVista();
         },
       });
   }
@@ -304,6 +408,31 @@ export class Home implements OnInit, OnDestroy {
         showLeaveButton: false,
       });
 
+      const call = this.dailyCall;
+      this.dailyCall.on('joined-meeting', () => {
+        if (this.dailyCall !== call || !this.conversationId || this.isEndingLucy) return;
+        this.isJoined = true;
+        this.sessionStatus = 'En consulta';
+        this.startTimer();
+        this.refrescarVista();
+        console.info('[Daily] Participante local conectado', new Date().toISOString());
+      });
+      this.dailyCall.on('left-meeting', () => {
+        if (this.dailyCall !== call || !this.conversationId || this.isEndingLucy) return;
+        this.isJoined = false;
+        this.stopTimer();
+        this.sessionStatus = 'Desconectada';
+        this.errorMessage = 'Se perdió la conexión. Pulsa Finalizar para confirmar el cierre de la sesión.';
+        this.refrescarVista();
+        console.warn('[Daily] Participante local desconectado', new Date().toISOString());
+      });
+      this.dailyCall.on('error', (event) => {
+        if (this.dailyCall !== call || !this.conversationId || this.isEndingLucy) return;
+        console.error('[Daily] Error de conexión:', event);
+        this.errorMessage = 'Error en la videollamada. Pulsa Finalizar para confirmar el cierre de la sesión.';
+        this.refrescarVista();
+      });
+
       this.dailyCall
         .join({ url })
         .then(() => {
@@ -311,9 +440,11 @@ export class Home implements OnInit, OnDestroy {
         })
         .catch((error) => {
           console.error('Error al conectar Daily:', error);
+          this.refrescarVista();
         });
     } catch (error) {
       console.error('Error al crear Daily:', error);
+      this.refrescarVista();
     }
   }
 }
