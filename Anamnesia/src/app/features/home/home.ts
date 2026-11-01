@@ -4,9 +4,12 @@ import {
   ElementRef,
   HostListener,
   OnDestroy,
+  OnInit,
   ViewChild,
-  inject,
+  inject
 } from '@angular/core';
+
+import { DecimalPipe } from '@angular/common';
 
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -31,6 +34,33 @@ interface Message {
   time: string;
 }
 
+interface CriterioEvaluacion {
+  id: string;
+  nombre: string;
+  puntaje: number;
+  puntaje_maximo: number;
+  justificacion: string;
+}
+
+interface ResultadoEvaluacion {
+  criterios: CriterioEvaluacion[];
+  puntaje_total: number;
+  puntaje_maximo: number;
+  porcentaje: number;
+  fortalezas: string[];
+  aspectos_por_mejorar: string[];
+  preguntas_omitidas: string[];
+  retroalimentacion_general: string;
+}
+
+interface RespuestaEvaluacion {
+  message: string;
+  conversation_id: string;
+  caso_id: string;
+  escenario: string;
+  evaluacion: ResultadoEvaluacion;
+}
+
 // ==========================================================
 // COMPONENT
 // ==========================================================
@@ -38,11 +68,21 @@ interface Message {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, DecimalPipe],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
-export class Home implements OnDestroy {
+export class Home implements OnDestroy, OnInit {
+
+  ngOnInit(): void {
+  const conversationId = localStorage.getItem(
+    'anamnesia_ultima_conversacion'
+  );
+
+  if (conversationId) {
+    this.recuperarEvaluacion(conversationId);
+  }
+}
   private readonly cdr = inject(ChangeDetectorRef);
 
   // ==========================================================
@@ -57,6 +97,13 @@ export class Home implements OnDestroy {
   sessionStatus = 'Lista para iniciar';
   errorMessage = '';
   noticeMessage = '';
+  // ==========================================================
+  // EVALUACIÓN
+  // ==========================================================
+
+  isEvaluating = false;
+  evaluation: ResultadoEvaluacion | null = null;
+  evaluationError = '';
 
   private destroyed = false;
   private readonly cierresAlSalir = new Set<string>();
@@ -268,6 +315,13 @@ export class Home implements OnDestroy {
       .post<{ message?: string }>(`${this.apiBase}/${encodeURIComponent(id)}/finalizar`, {})
       .subscribe({
         next: (response) => {
+          // Conservamos el ID para solicitar la evaluación
+          // después de confirmar el cierre de Tavus.
+          const conversationIdParaEvaluar = id;
+          localStorage.setItem(
+            'anamnesia_ultima_conversacion',
+            conversationIdParaEvaluar
+          );
           // El backend respondió tras cerrar Tavus. Ahora libera la llamada local.
           this.conversationId = null;
           this.pendingDailyUrl = null;
@@ -291,6 +345,9 @@ export class Home implements OnDestroy {
               this.conversationUrl = null;
               this.isEndingLucy = false;
               this.refrescarVista();
+
+              // Una vez finalizada la conversación, solicitamos la evaluación.
+              this.evaluarConversacion(conversationIdParaEvaluar);
             }
           })();
         },
@@ -304,6 +361,78 @@ export class Home implements OnDestroy {
         },
       });
   }
+
+  evaluarConversacion(conversationId: string): void {
+  this.isEvaluating = true;
+  this.evaluationError = '';
+  this.evaluation = null;
+
+  this.sessionStatus = 'Evaluando anamnesis...';
+
+  this.http
+    .post<RespuestaEvaluacion>(
+      `${this.apiBase}/${encodeURIComponent(conversationId)}/evaluar`,
+      {}
+    )
+    .subscribe({
+      next: (response) => {
+        this.evaluation = response.evaluacion;
+        this.isEvaluating = false;
+        this.sessionStatus = 'Evaluación completada';
+
+        console.log('Resultado de evaluación:', response);
+
+        this.refrescarVista();
+      },
+
+      error: (error) => {
+        console.error('Error al evaluar la conversación:', error);
+
+        this.isEvaluating = false;
+        this.evaluationError =
+          error.error?.message ||
+          error.error?.error ||
+          'No se pudo obtener la evaluación.';
+
+        this.sessionStatus = 'Evaluación pendiente';
+
+        this.refrescarVista();
+      },
+    });
+}
+
+
+  recuperarEvaluacion(conversationId: string): void {
+    this.isEvaluating = true;
+    this.evaluationError = '';
+    this.evaluation = null;
+    this.sessionStatus = 'Recuperando evaluación...';
+
+    this.http
+      .get<RespuestaEvaluacion>(
+        `${this.apiBase}/${encodeURIComponent(conversationId)}/evaluacion`
+      )
+      .subscribe({
+        next: (response) => {
+          this.evaluation = response.evaluacion;
+          this.isEvaluating = false;
+          this.sessionStatus = 'Evaluación recuperada';
+          console.log('Evaluación recuperada:', response);
+          this.refrescarVista();
+        },
+        error: (error) => {
+          console.error('Error al recuperar la evaluación:', error);
+          this.isEvaluating = false;
+          this.evaluationError =
+            error.error?.message ||
+            error.error?.error ||
+            'No se pudo recuperar la evaluación guardada.';
+          this.sessionStatus = 'Evaluación no disponible';
+          this.refrescarVista();
+        },
+      });
+  }
+
 
   // ==========================================================
   // CURRENT TIME
@@ -330,6 +459,9 @@ export class Home implements OnDestroy {
     this.errorMessage = '';
     this.noticeMessage = '';
     this.elapsedSeconds = 0;
+    this.evaluation = null;
+    this.evaluationError = '';
+    this.isEvaluating = false;
     this.messages = [];
     this.currentCaption = '';
     this.cierresAlSalir.clear();

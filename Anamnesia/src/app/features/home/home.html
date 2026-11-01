@@ -274,4 +274,107 @@
 
   </main>
 
+  <!-- RESULTADOS DE LA EVALUACIÓN -->
+  @if (isEvaluating) {
+    <section class="evaluation-panel">
+      <h2>Evaluando anamnesis</h2>
+      <p>Estamos analizando tu conversación con Lucy. Esto puede tardar unos segundos.</p>
+    </section>
+  }
+
+  @if (evaluationError) {
+    <section class="evaluation-panel evaluation-error" role="alert">
+      <h2>No se pudo completar la evaluación</h2>
+      <p>{{ evaluationError }}</p>
+    </section>
+  }
+
+  @if (evaluation) {
+    <section class="evaluation-panel">
+
+      <div class="evaluation-header">
+        <div>
+          <span class="section-label">RESULTADO</span>
+          <h2>Evaluación de tu anamnesis</h2>
+        </div>
+
+        <div class="evaluation-score">
+          <strong>{{ evaluation.porcentaje | number:'1.0-1' }}%</strong>
+          <span>
+            {{ evaluation.puntaje_total }} / {{ evaluation.puntaje_maximo }} puntos
+          </span>
+        </div>
+      </div>
+
+      <div class="evaluation-feedback">
+        <h3>Retroalimentación general</h3>
+        <p>{{ evaluation.retroalimentacion_general }}</p>
+      </div>
+
+      <div class="evaluation-criteria">
+        <h3>Evaluación por criterios</h3>
+
+        @for (criterio of evaluation.criterios; track criterio.id) {
+          <article class="criterion-item">
+            <div class="criterion-header">
+              <strong>{{ criterio.nombre }}</strong>
+              <span>
+                {{ criterio.puntaje }} / {{ criterio.puntaje_maximo }}
+              </span>
+            </div>
+
+            <p>{{ criterio.justificacion }}</p>
+          </article>
+        }
+      </div>
+
+      <div class="evaluation-lists">
+
+        <div>
+          <h3>Fortalezas</h3>
+
+          @if (evaluation.fortalezas.length > 0) {
+            <ul>
+              @for (fortaleza of evaluation.fortalezas; track $index) {
+                <li>{{ fortaleza }}</li>
+              }
+            </ul>
+          } @else {
+            <p>No se registraron fortalezas.</p>
+          }
+        </div>
+
+        <div>
+          <h3>Aspectos por mejorar</h3>
+
+          @if (evaluation.aspectos_por_mejorar.length > 0) {
+            <ul>
+              @for (aspecto of evaluation.aspectos_por_mejorar; track $index) {
+                <li>{{ aspecto }}</li>
+              }
+            </ul>
+          } @else {
+            <p>No se registraron aspectos por mejorar.</p>
+          }
+        </div>
+
+        <div>
+          <h3>Preguntas omitidas</h3>
+
+          @if (evaluation.preguntas_omitidas.length > 0) {
+            <ul>
+              @for (pregunta of evaluation.preguntas_omitidas; track $index) {
+                <li>{{ pregunta }}</li>
+              }
+            </ul>
+          } @else {
+            <p>No se identificaron preguntas omitidas.</p>
+          }
+        </div>
+
+      </div>
+
+    </section>
+  }
+
 </div>
