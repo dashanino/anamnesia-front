@@ -10,11 +10,28 @@
         <p>Simulación de anamnesis cardiovascular</p>
       </div>
     </div>
-    <div class="case-info">
-      <span class="case-label">CASO</span>
-      <span class="case-number">#04</span>
-      <div class="divider"></div>
-      <span class="timer">{{ formattedTime }}</span>
+
+    <div class="topbar-actions" style="display:flex;align-items:center;gap:14px;">
+      <button
+        type="button"
+        class="home-button"
+        (click)="volverAlInicio()"
+        aria-label="Volver al inicio"
+        title="Volver al inicio"
+        style="width:40px;height:40px;padding:0;border:1px solid #e2e6ea;border-radius:10px;background:#fff;color:#687582;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s ease;">
+        <svg viewBox="0 0 24 24" aria-hidden="true" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;">
+          <path d="M3 10.5 12 3l9 7.5" />
+          <path d="M5.5 9.5V21h13V9.5" />
+          <path d="M9.5 21v-6h5v6" />
+        </svg>
+      </button>
+
+      <div class="case-info">
+        <span class="case-label">CASO</span>
+        <span class="case-number">#04</span>
+        <div class="divider"></div>
+        <span class="timer">{{ formattedTime }}</span>
+      </div>
     </div>
   </header>
 
