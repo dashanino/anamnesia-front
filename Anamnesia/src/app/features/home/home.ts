@@ -48,12 +48,19 @@ interface ResultadoEvaluacion {
   retroalimentacion_general: string;
 }
 
+interface FeedbackTTS {
+  texto: string;
+  audio_base64: string;
+  mime_type: string;
+}
+
 interface RespuestaEvaluacion {
   message: string;
   conversation_id: string;
   caso_id: string;
   escenario: string;
   evaluacion: ResultadoEvaluacion;
+  feedback_tts?: FeedbackTTS;
 }
 
 @Component({
@@ -84,6 +91,7 @@ export class Home implements OnDestroy, OnInit {
   private readonly cierresAlSalir = new Set<string>();
   private dailyCall: ReturnType<typeof DailyIframe.createFrame> | null = null;
   private pendingDailyUrl: string | null = null;
+  private feedbackAudio: HTMLAudioElement | null = null;
 
   patient: Patient = {
     name: 'Lucy',
@@ -126,11 +134,14 @@ export class Home implements OnDestroy, OnInit {
     this.destroyed = true;
     this.solicitarCierreAlSalir();
     this.stopTimer();
+    this.detenerFeedbackAudio();
 
     const call = this.dailyCall;
     this.dailyCall = null;
     if (call) {
-      void call.destroy().catch((error) => console.warn('Error al liberar Daily:', error));
+      void call.destroy().catch((error) =>
+        console.warn('Error al liberar Daily:', error),
+      );
     }
   }
 
@@ -187,10 +198,6 @@ export class Home implements OnDestroy, OnInit {
     return value.toString().padStart(2, '0');
   }
 
-  // ==========================================================
-  // ESCRITURA -> TAVUS
-  // ==========================================================
-
   sendMessage(): void {
     const text = this.userInput.trim();
 
@@ -200,9 +207,6 @@ export class Home implements OnDestroy, OnInit {
 
     const call = this.dailyCall;
 
-    // Primero mostramos la pregunta en nuestra interfaz.
-    // No la enviamos al backend: Tavus la recibe por el canal CVI
-    // y posteriormente la incluye en la conversación/transcripción.
     this.messages.push({
       id: Date.now(),
       sender: 'student',
@@ -238,28 +242,23 @@ export class Home implements OnDestroy, OnInit {
       this.refrescarVista();
     }
   }
-  
 
   toggleRecording(): void {
     if (!this.dailyCall || !this.isJoined) return;
 
-    this.isRecording = !this.isRecording;
+    const newRecordingState = !this.isRecording;
 
     try {
-      this.dailyCall.setLocalAudio(this.isRecording);
+      this.dailyCall.setLocalAudio(newRecordingState);
+      this.isRecording = newRecordingState;
     } catch (error) {
       console.error('[Daily] No se pudo cambiar el micrófono:', error);
       this.isRecording = false;
-      this.errorMessage = 'No se pudo activar el micrófono.';
-      this.refrescarVista();
+      this.errorMessage = 'No se pudo cambiar el estado del micrófono.';
     }
 
     this.refrescarVista();
   }
-
-  // ==========================================================
-  // FINALIZAR Y EVALUAR
-  // ==========================================================
 
   endConsultation(): void {
     if (!this.conversationId || this.isEndingLucy) return;
@@ -270,9 +269,13 @@ export class Home implements OnDestroy, OnInit {
     this.sessionStatus = 'Finalizando...';
     this.errorMessage = '';
     this.noticeMessage = '';
+    this.detenerFeedbackAudio();
 
     this.http
-      .post<{ message?: string }>(`${this.apiBase}/${encodeURIComponent(id)}/finalizar`, {})
+      .post<{ message?: string }>(
+        `${this.apiBase}/${encodeURIComponent(id)}/finalizar`,
+        {},
+      )
       .subscribe({
         next: (response) => {
           const conversationIdParaEvaluar = id;
@@ -331,17 +334,117 @@ export class Home implements OnDestroy, OnInit {
           this.isEvaluating = false;
           this.sessionStatus = 'Evaluación completada';
           console.log('Resultado de evaluación:', response);
+
+          if (response.feedback_tts?.audio_base64) {
+            this.reproducirFeedbackTTS(response.feedback_tts);
+          }
+
           this.refrescarVista();
         },
         error: (error) => {
           console.error('Error al evaluar la conversación:', error);
           this.isEvaluating = false;
           this.evaluationError =
-            error.error?.message || error.error?.error || 'No se pudo obtener la evaluación.';
+            error.error?.message ||
+            error.error?.error ||
+            'No se pudo obtener la evaluación.';
           this.sessionStatus = 'Evaluación pendiente';
           this.refrescarVista();
         },
       });
+  }
+
+  private reproducirFeedbackTTS(feedback: FeedbackTTS): void {
+    this.detenerFeedbackAudio();
+
+    try {
+      const audioUrl = `data:${feedback.mime_type};base64,${feedback.audio_base64}`;
+      const audio = new Audio(audioUrl);
+      this.feedbackAudio = audio;
+
+      console.log('[TTS] Preparando audio:', {
+        mime_type: feedback.mime_type,
+        base64_length: feedback.audio_base64.length,
+      });
+
+      audio.onplay = () => console.log('[TTS] ▶️ Reproducción iniciada');
+      audio.onloadeddata = () => console.log('[TTS] Audio cargado correctamente');
+      audio.onended = () => {
+        console.log('[TTS] Reproducción terminada');
+        if (this.feedbackAudio === audio) {
+          this.feedbackAudio = null;
+        }
+      };
+
+      audio.onerror = (error) => {
+        console.error('[TTS] ❌ No se pudo reproducir el feedback:', error);
+        if (this.feedbackAudio === audio) {
+          this.feedbackAudio = null;
+        }
+      };
+
+      void audio.play().catch((error) => {
+        console.error('[TTS] ❌ audio.play() falló:', error);
+        this.feedbackAudio = null;
+      });
+    } catch (error) {
+      console.error('[TTS] ❌ Error preparando el audio:', error);
+    }
+  }
+
+  probarFeedbackTTSGuardado(): void {
+    const conversationId = localStorage.getItem('anamnesia_ultima_conversacion');
+
+    if (!conversationId) {
+      this.noticeMessage = 'No hay una evaluación guardada para probar el audio.';
+      return;
+    }
+
+    this.noticeMessage = 'Generando audio de prueba...';
+    this.errorMessage = '';
+
+    console.log('[TTS TEST] Solicitando audio para:', conversationId);
+
+    this.http
+      .get<{
+        message: string;
+        conversation_id: string;
+        feedback_tts: FeedbackTTS;
+      }>(`${this.apiBase}/${encodeURIComponent(conversationId)}/feedback-audio`)
+      .subscribe({
+        next: (response) => {
+          console.log('[TTS TEST] Respuesta:', {
+            message: response.message,
+            mime_type: response.feedback_tts?.mime_type,
+            base64_length: response.feedback_tts?.audio_base64?.length,
+          });
+
+          if (!response.feedback_tts?.audio_base64) {
+            this.errorMessage = 'El backend no devolvió audio.';
+            this.noticeMessage = '';
+            return;
+          }
+
+          this.noticeMessage = 'Audio generado. Reproduciendo...';
+          this.reproducirFeedbackTTS(response.feedback_tts);
+        },
+        error: (error) => {
+          console.error('[TTS TEST] Error:', error);
+          this.errorMessage =
+            error.error?.error ||
+            error.error?.message ||
+            'No se pudo generar el audio de prueba.';
+          this.noticeMessage = '';
+        },
+      });
+  }
+
+  private detenerFeedbackAudio(): void {
+    if (!this.feedbackAudio) return;
+
+    this.feedbackAudio.pause();
+    this.feedbackAudio.currentTime = 0;
+    this.feedbackAudio = null;
   }
 
   recuperarEvaluacion(conversationId: string): void {
@@ -351,7 +454,9 @@ export class Home implements OnDestroy, OnInit {
     this.sessionStatus = 'Recuperando evaluación...';
 
     this.http
-      .get<RespuestaEvaluacion>(`${this.apiBase}/${encodeURIComponent(conversationId)}/evaluacion`)
+      .get<RespuestaEvaluacion>(
+        `${this.apiBase}/${encodeURIComponent(conversationId)}/evaluacion`,
+      )
       .subscribe({
         next: (response) => {
           this.evaluation = response.evaluacion;
@@ -379,10 +484,6 @@ export class Home implements OnDestroy, OnInit {
     });
   }
 
-  // ==========================================================
-  // CREAR CONVERSACIÓN TAVUS
-  // ==========================================================
-
   iniciarSimulacion(): void {
     if (this.isLoadingLucy || this.isEndingLucy || this.conversationId) return;
 
@@ -397,6 +498,7 @@ export class Home implements OnDestroy, OnInit {
     this.messages = [];
     this.currentCaption = '';
     this.cierresAlSalir.clear();
+    this.detenerFeedbackAudio();
 
     this.http
       .post<{
@@ -434,8 +536,7 @@ export class Home implements OnDestroy, OnInit {
             this.conversationUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url.toString());
           } catch (error) {
             console.error('Error al preparar la URL:', error);
-            this.errorMessage =
-              'No se pudo abrir la videollamada. Finaliza la sesión antes de reintentar.';
+            this.errorMessage = 'No se pudo abrir la videollamada. Finaliza la sesión antes de reintentar.';
           } finally {
             this.isLoadingLucy = false;
             this.refrescarVista();
@@ -445,16 +546,14 @@ export class Home implements OnDestroy, OnInit {
           console.error('Error al iniciar Lucy:', error);
           this.sessionStatus = 'Error al iniciar';
           this.errorMessage =
-            error.error?.message || error.error?.error || 'No se pudo iniciar la conversación.';
+            error.error?.message ||
+            error.error?.error ||
+            'No se pudo iniciar la conversación.';
           this.isLoadingLucy = false;
           this.refrescarVista();
         },
       });
   }
-
-  // ==========================================================
-  // DAILY / TAVUS
-  // ==========================================================
 
   private iniciarDaily(url: string, container: HTMLDivElement): void {
     if (this.dailyCall) return;
@@ -522,8 +621,7 @@ export class Home implements OnDestroy, OnInit {
         this.isJoined = false;
         this.stopTimer();
         this.sessionStatus = 'Desconectada';
-        this.errorMessage =
-          'Se perdió la conexión. Pulsa Finalizar para confirmar el cierre de la sesión.';
+        this.errorMessage = 'Se perdió la conexión. Pulsa Finalizar para confirmar el cierre de la sesión.';
         this.refrescarVista();
       });
 
@@ -531,8 +629,7 @@ export class Home implements OnDestroy, OnInit {
         if (this.dailyCall !== call || !this.conversationId || this.isEndingLucy) return;
 
         console.error('[Daily] Error de conexión:', event);
-        this.errorMessage =
-          'Error en la videollamada. Pulsa Finalizar para confirmar el cierre de la sesión.';
+        this.errorMessage = 'Error en la videollamada. Pulsa Finalizar para confirmar el cierre de la sesión.';
         this.refrescarVista();
       });
 
