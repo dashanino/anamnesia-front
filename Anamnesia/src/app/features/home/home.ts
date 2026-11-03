@@ -139,9 +139,7 @@ export class Home implements OnDestroy, OnInit {
     const call = this.dailyCall;
     this.dailyCall = null;
     if (call) {
-      void call.destroy().catch((error) =>
-        console.warn('Error al liberar Daily:', error),
-      );
+      void call.destroy().catch((error) => console.warn('Error al liberar Daily:', error));
     }
   }
 
@@ -272,10 +270,7 @@ export class Home implements OnDestroy, OnInit {
     this.detenerFeedbackAudio();
 
     this.http
-      .post<{ message?: string }>(
-        `${this.apiBase}/${encodeURIComponent(id)}/finalizar`,
-        {},
-      )
+      .post<{ message?: string }>(`${this.apiBase}/${encodeURIComponent(id)}/finalizar`, {})
       .subscribe({
         next: (response) => {
           const conversationIdParaEvaluar = id;
@@ -345,9 +340,7 @@ export class Home implements OnDestroy, OnInit {
           console.error('Error al evaluar la conversación:', error);
           this.isEvaluating = false;
           this.evaluationError =
-            error.error?.message ||
-            error.error?.error ||
-            'No se pudo obtener la evaluación.';
+            error.error?.message || error.error?.error || 'No se pudo obtener la evaluación.';
           this.sessionStatus = 'Evaluación pendiente';
           this.refrescarVista();
         },
@@ -392,53 +385,6 @@ export class Home implements OnDestroy, OnInit {
     }
   }
 
-  probarFeedbackTTSGuardado(): void {
-    const conversationId = localStorage.getItem('anamnesia_ultima_conversacion');
-
-    if (!conversationId) {
-      this.noticeMessage = 'No hay una evaluación guardada para probar el audio.';
-      return;
-    }
-
-    this.noticeMessage = 'Generando audio de prueba...';
-    this.errorMessage = '';
-
-    console.log('[TTS TEST] Solicitando audio para:', conversationId);
-
-    this.http
-      .get<{
-        message: string;
-        conversation_id: string;
-        feedback_tts: FeedbackTTS;
-      }>(`${this.apiBase}/${encodeURIComponent(conversationId)}/feedback-audio`)
-      .subscribe({
-        next: (response) => {
-          console.log('[TTS TEST] Respuesta:', {
-            message: response.message,
-            mime_type: response.feedback_tts?.mime_type,
-            base64_length: response.feedback_tts?.audio_base64?.length,
-          });
-
-          if (!response.feedback_tts?.audio_base64) {
-            this.errorMessage = 'El backend no devolvió audio.';
-            this.noticeMessage = '';
-            return;
-          }
-
-          this.noticeMessage = 'Audio generado. Reproduciendo...';
-          this.reproducirFeedbackTTS(response.feedback_tts);
-        },
-        error: (error) => {
-          console.error('[TTS TEST] Error:', error);
-          this.errorMessage =
-            error.error?.error ||
-            error.error?.message ||
-            'No se pudo generar el audio de prueba.';
-          this.noticeMessage = '';
-        },
-      });
-  }
-
   private detenerFeedbackAudio(): void {
     if (!this.feedbackAudio) return;
 
@@ -454,14 +400,15 @@ export class Home implements OnDestroy, OnInit {
     this.sessionStatus = 'Recuperando evaluación...';
 
     this.http
-      .get<RespuestaEvaluacion>(
-        `${this.apiBase}/${encodeURIComponent(conversationId)}/evaluacion`,
-      )
+      .get<RespuestaEvaluacion>(`${this.apiBase}/${encodeURIComponent(conversationId)}/evaluacion`)
       .subscribe({
         next: (response) => {
           this.evaluation = response.evaluacion;
           this.isEvaluating = false;
-          this.sessionStatus = 'Evaluación recuperada';
+          this.sessionStatus = 'Evaluación completada';
+
+          console.log('Resultado de evaluación:', response);
+
           this.refrescarVista();
         },
         error: (error) => {
@@ -484,7 +431,7 @@ export class Home implements OnDestroy, OnInit {
 
     if (tieneSesionActiva) {
       const confirmar = confirm(
-        'La anamnesis todavía está activa. ¿Quieres salir y comenzar desde cero?'
+        'La anamnesis todavía está activa. ¿Quieres salir y comenzar desde cero?',
       );
 
       if (!confirmar) return;
@@ -503,9 +450,9 @@ export class Home implements OnDestroy, OnInit {
     this.dailyCall = null;
 
     if (call) {
-      void call.destroy().catch((error) =>
-        console.warn('No se pudo liberar Daily al volver al inicio:', error),
-      );
+      void call
+        .destroy()
+        .catch((error) => console.warn('No se pudo liberar Daily al volver al inicio:', error));
     }
 
     window.location.reload();
@@ -570,7 +517,8 @@ export class Home implements OnDestroy, OnInit {
             this.conversationUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url.toString());
           } catch (error) {
             console.error('Error al preparar la URL:', error);
-            this.errorMessage = 'No se pudo abrir la videollamada. Finaliza la sesión antes de reintentar.';
+            this.errorMessage =
+              'No se pudo abrir la videollamada. Finaliza la sesión antes de reintentar.';
           } finally {
             this.isLoadingLucy = false;
             this.refrescarVista();
@@ -580,9 +528,7 @@ export class Home implements OnDestroy, OnInit {
           console.error('Error al iniciar Lucy:', error);
           this.sessionStatus = 'Error al iniciar';
           this.errorMessage =
-            error.error?.message ||
-            error.error?.error ||
-            'No se pudo iniciar la conversación.';
+            error.error?.message || error.error?.error || 'No se pudo iniciar la conversación.';
           this.isLoadingLucy = false;
           this.refrescarVista();
         },
@@ -655,7 +601,8 @@ export class Home implements OnDestroy, OnInit {
         this.isJoined = false;
         this.stopTimer();
         this.sessionStatus = 'Desconectada';
-        this.errorMessage = 'Se perdió la conexión. Pulsa Finalizar para confirmar el cierre de la sesión.';
+        this.errorMessage =
+          'Se perdió la conexión. Pulsa Finalizar para confirmar el cierre de la sesión.';
         this.refrescarVista();
       });
 
@@ -663,7 +610,8 @@ export class Home implements OnDestroy, OnInit {
         if (this.dailyCall !== call || !this.conversationId || this.isEndingLucy) return;
 
         console.error('[Daily] Error de conexión:', event);
-        this.errorMessage = 'Error en la videollamada. Pulsa Finalizar para confirmar el cierre de la sesión.';
+        this.errorMessage =
+          'Error en la videollamada. Pulsa Finalizar para confirmar el cierre de la sesión.';
         this.refrescarVista();
       });
 
