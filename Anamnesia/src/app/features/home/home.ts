@@ -477,6 +477,40 @@ export class Home implements OnDestroy, OnInit {
       });
   }
 
+  volverAlInicio(): void {
+    if (this.isEndingLucy) return;
+
+    const tieneSesionActiva = !!this.conversationId;
+
+    if (tieneSesionActiva) {
+      const confirmar = confirm(
+        'La anamnesis todavía está activa. ¿Quieres salir y comenzar desde cero?'
+      );
+
+      if (!confirmar) return;
+
+      this.solicitarCierreAlSalir();
+    }
+
+    this.detenerFeedbackAudio();
+    this.stopTimer();
+    this.isRecording = false;
+    this.isJoined = false;
+
+    localStorage.removeItem('anamnesia_ultima_conversacion');
+
+    const call = this.dailyCall;
+    this.dailyCall = null;
+
+    if (call) {
+      void call.destroy().catch((error) =>
+        console.warn('No se pudo liberar Daily al volver al inicio:', error),
+      );
+    }
+
+    window.location.reload();
+  }
+
   private getCurrentTime(): string {
     return new Date().toLocaleTimeString('es-CO', {
       hour: '2-digit',
