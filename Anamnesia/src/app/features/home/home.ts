@@ -198,10 +198,6 @@ export class Home implements OnDestroy, OnInit {
     return value.toString().padStart(2, '0');
   }
 
-  // ==========================================================
-  // ESCRITURA -> TAVUS
-  // ==========================================================
-
   sendMessage(): void {
     const text = this.userInput.trim();
 
@@ -263,10 +259,6 @@ export class Home implements OnDestroy, OnInit {
 
     this.refrescarVista();
   }
-
-  // ==========================================================
-  // FINALIZAR Y EVALUAR
-  // ==========================================================
 
   endConsultation(): void {
     if (!this.conversationId || this.isEndingLucy) return;
@@ -370,26 +362,81 @@ export class Home implements OnDestroy, OnInit {
       const audio = new Audio(audioUrl);
       this.feedbackAudio = audio;
 
+      console.log('[TTS] Preparando audio:', {
+        mime_type: feedback.mime_type,
+        base64_length: feedback.audio_base64.length,
+      });
+
+      audio.onplay = () => console.log('[TTS] ▶️ Reproducción iniciada');
+      audio.onloadeddata = () => console.log('[TTS] Audio cargado correctamente');
       audio.onended = () => {
+        console.log('[TTS] Reproducción terminada');
         if (this.feedbackAudio === audio) {
           this.feedbackAudio = null;
         }
       };
 
       audio.onerror = (error) => {
-        console.error('[TTS] No se pudo reproducir el feedback:', error);
+        console.error('[TTS] ❌ No se pudo reproducir el feedback:', error);
         if (this.feedbackAudio === audio) {
           this.feedbackAudio = null;
         }
       };
 
       void audio.play().catch((error) => {
-        console.error('[TTS] El navegador bloqueó la reproducción automática:', error);
+        console.error('[TTS] ❌ audio.play() falló:', error);
         this.feedbackAudio = null;
       });
     } catch (error) {
-      console.error('[TTS] Error preparando el audio:', error);
+      console.error('[TTS] ❌ Error preparando el audio:', error);
     }
+  }
+
+  probarFeedbackTTSGuardado(): void {
+    const conversationId = localStorage.getItem('anamnesia_ultima_conversacion');
+
+    if (!conversationId) {
+      this.noticeMessage = 'No hay una evaluación guardada para probar el audio.';
+      return;
+    }
+
+    this.noticeMessage = 'Generando audio de prueba...';
+    this.errorMessage = '';
+
+    console.log('[TTS TEST] Solicitando audio para:', conversationId);
+
+    this.http
+      .get<{
+        message: string;
+        conversation_id: string;
+        feedback_tts: FeedbackTTS;
+      }>(`${this.apiBase}/${encodeURIComponent(conversationId)}/feedback-audio`)
+      .subscribe({
+        next: (response) => {
+          console.log('[TTS TEST] Respuesta:', {
+            message: response.message,
+            mime_type: response.feedback_tts?.mime_type,
+            base64_length: response.feedback_tts?.audio_base64?.length,
+          });
+
+          if (!response.feedback_tts?.audio_base64) {
+            this.errorMessage = 'El backend no devolvió audio.';
+            this.noticeMessage = '';
+            return;
+          }
+
+          this.noticeMessage = 'Audio generado. Reproduciendo...';
+          this.reproducirFeedbackTTS(response.feedback_tts);
+        },
+        error: (error) => {
+          console.error('[TTS TEST] Error:', error);
+          this.errorMessage =
+            error.error?.error ||
+            error.error?.message ||
+            'No se pudo generar el audio de prueba.';
+          this.noticeMessage = '';
+        },
+      });
   }
 
   private detenerFeedbackAudio(): void {
@@ -436,10 +483,6 @@ export class Home implements OnDestroy, OnInit {
       minute: '2-digit',
     });
   }
-
-  // ==========================================================
-  // CREAR CONVERSACIÓN TAVUS
-  // ==========================================================
 
   iniciarSimulacion(): void {
     if (this.isLoadingLucy || this.isEndingLucy || this.conversationId) return;
@@ -511,10 +554,6 @@ export class Home implements OnDestroy, OnInit {
         },
       });
   }
-
-  // ==========================================================
-  // DAILY / TAVUS
-  // ==========================================================
 
   private iniciarDaily(url: string, container: HTMLDivElement): void {
     if (this.dailyCall) return;
