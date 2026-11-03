@@ -48,12 +48,19 @@ interface ResultadoEvaluacion {
   retroalimentacion_general: string;
 }
 
+interface FeedbackTTS {
+  texto: string;
+  audio_base64: string;
+  mime_type: string;
+}
+
 interface RespuestaEvaluacion {
   message: string;
   conversation_id: string;
   caso_id: string;
   escenario: string;
   evaluacion: ResultadoEvaluacion;
+  feedback_tts?: FeedbackTTS;
 }
 
 @Component({
@@ -84,6 +91,7 @@ export class Home implements OnDestroy, OnInit {
   private readonly cierresAlSalir = new Set<string>();
   private dailyCall: ReturnType<typeof DailyIframe.createFrame> | null = null;
   private pendingDailyUrl: string | null = null;
+  private feedbackAudio: HTMLAudioElement | null = null;
 
   patient: Patient = {
     name: 'Lucy',
@@ -126,6 +134,7 @@ export class Home implements OnDestroy, OnInit {
     this.destroyed = true;
     this.solicitarCierreAlSalir();
     this.stopTimer();
+    this.detenerFeedbackAudio();
 
     const call = this.dailyCall;
     this.dailyCall = null;
@@ -202,9 +211,6 @@ export class Home implements OnDestroy, OnInit {
 
     const call = this.dailyCall;
 
-    // Primero mostramos la pregunta en nuestra interfaz.
-    // No la enviamos al backend: Tavus la recibe por el canal CVI
-    // y posteriormente la incluye en la conversación/transcripción.
     this.messages.push({
       id: Date.now(),
       sender: 'student',
@@ -244,14 +250,16 @@ export class Home implements OnDestroy, OnInit {
   toggleRecording(): void {
     if (!this.dailyCall || !this.isJoined) return;
 
-    this.isRecording = !this.isRecording;
+    const newRecordingState = !this.isRecording;
 
-    void this.dailyCall.setLocalAudio(this.isRecording).catch((error) => {
+    try {
+      this.dailyCall.setLocalAudio(newRecordingState);
+      this.isRecording = newRecordingState;
+    } catch (error) {
       console.error('[Daily] No se pudo cambiar el micrófono:', error);
       this.isRecording = false;
-      this.errorMessage = 'No se pudo activar el micrófono.';
-      this.refrescarVista();
-    });
+      this.errorMessage = 'No se pudo cambiar el estado del micrófono.';
+    }
 
     this.refrescarVista();
   }
@@ -269,6 +277,7 @@ export class Home implements OnDestroy, OnInit {
     this.sessionStatus = 'Finalizando...';
     this.errorMessage = '';
     this.noticeMessage = '';
+    this.detenerFeedbackAudio();
 
     this.http
       .post<{ message?: string }>(
@@ -333,6 +342,11 @@ export class Home implements OnDestroy, OnInit {
           this.isEvaluating = false;
           this.sessionStatus = 'Evaluación completada';
           console.log('Resultado de evaluación:', response);
+
+          if (response.feedback_tts?.audio_base64) {
+            this.reproducirFeedbackTTS(response.feedback_tts);
+          }
+
           this.refrescarVista();
         },
         error: (error) => {
@@ -346,6 +360,44 @@ export class Home implements OnDestroy, OnInit {
           this.refrescarVista();
         },
       });
+  }
+
+  private reproducirFeedbackTTS(feedback: FeedbackTTS): void {
+    this.detenerFeedbackAudio();
+
+    try {
+      const audioUrl = `data:${feedback.mime_type};base64,${feedback.audio_base64}`;
+      const audio = new Audio(audioUrl);
+      this.feedbackAudio = audio;
+
+      audio.onended = () => {
+        if (this.feedbackAudio === audio) {
+          this.feedbackAudio = null;
+        }
+      };
+
+      audio.onerror = (error) => {
+        console.error('[TTS] No se pudo reproducir el feedback:', error);
+        if (this.feedbackAudio === audio) {
+          this.feedbackAudio = null;
+        }
+      };
+
+      void audio.play().catch((error) => {
+        console.error('[TTS] El navegador bloqueó la reproducción automática:', error);
+        this.feedbackAudio = null;
+      });
+    } catch (error) {
+      console.error('[TTS] Error preparando el audio:', error);
+    }
+  }
+
+  private detenerFeedbackAudio(): void {
+    if (!this.feedbackAudio) return;
+
+    this.feedbackAudio.pause();
+    this.feedbackAudio.currentTime = 0;
+    this.feedbackAudio = null;
   }
 
   recuperarEvaluacion(conversationId: string): void {
@@ -403,6 +455,7 @@ export class Home implements OnDestroy, OnInit {
     this.messages = [];
     this.currentCaption = '';
     this.cierresAlSalir.clear();
+    this.detenerFeedbackAudio();
 
     this.http
       .post<{
