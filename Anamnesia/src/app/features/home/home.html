@@ -202,6 +202,13 @@
       <div class="evaluation-feedback">
         <h3>Retroalimentación general</h3>
         <p>{{ evaluation.retroalimentacion_general }}</p>
+        <button
+          type="button"
+          class="input-option"
+          (click)="probarFeedbackTTSGuardado()"
+          [disabled]="isEvaluating">
+          🔊 Probar audio del feedback
+        </button>
       </div>
 
       <div class="evaluation-criteria">
