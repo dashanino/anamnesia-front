@@ -1,49 +1,36 @@
 <div class="anamnesis-page">
 
-  <!-- HEADER -->
   <header class="topbar">
     <div class="brand">
       <div class="brand-icon">
         <img src="/logo_anamnesia.png" alt="AnamnesIA">
       </div>
-
       <div>
         <h1>AnamnesIA</h1>
         <p>Simulación de anamnesis cardiovascular</p>
       </div>
     </div>
-
     <div class="case-info">
       <span class="case-label">CASO</span>
       <span class="case-number">#04</span>
-
       <div class="divider"></div>
-
       <span class="timer">{{ formattedTime }}</span>
     </div>
   </header>
 
-
-  <!-- MAIN -->
   <main class="simulation">
-
-    <!-- LEFT: AVATAR -->
     <section class="patient-panel">
-
       <div class="patient-header">
         <div>
           <span class="section-label">PACIENTE VIRTUAL</span>
           <h2>{{ patient.name }}</h2>
         </div>
-
         <div class="online-status">
           <span class="status-dot" [class.connected]="isJoined"></span>
           {{ sessionStatus }}
         </div>
       </div>
 
-
-                <!-- AVATAR -->
       @if (errorMessage) {
         <div class="session-message session-error" role="alert">{{ errorMessage }}</div>
       }
@@ -52,229 +39,139 @@
       }
 
       <div class="avatar-container">
-
         @if (conversationUrl) {
-
-          <div
-            #dailyContainer
-            class="tavus-video"
-            aria-label="Videollamada con Lucy">
-          </div>
-
+          <div #dailyContainer class="tavus-video" aria-label="Videollamada con Lucy"></div>
         } @else {
-
           <div class="avatar-loading">
             <p>Lucy está lista para iniciar.</p>
-
             <button
               type="button"
               (click)="iniciarSimulacion()"
               [disabled]="isLoadingLucy || isEndingLucy || !!conversationId">
-
               {{ isLoadingLucy ? 'Preparando...' : 'Iniciar simulación' }}
-
             </button>
           </div>
-
         }
-
       </div>
 
-<!-- PATIENT INFO -->
-
-      <!-- PATIENT INFO -->
       <div class="patient-info">
-
         <div class="patient-data">
           <span class="label">Edad</span>
           <strong>{{ patient.age }} años</strong>
         </div>
-
         <div class="patient-data">
           <span class="label">Sexo</span>
           <strong>{{ patient.sex }}</strong>
         </div>
-
         <div class="patient-data">
           <span class="label">Motivo</span>
           <strong>{{ patient.chiefComplaint }}</strong>
         </div>
-
       </div>
-
     </section>
 
-
-    <!-- RIGHT: CONVERSATION -->
     <section class="conversation-panel">
-
-      <!-- Conversation header -->
       <div class="conversation-header">
-
         <div>
           <span class="section-label">ANAMNESIS</span>
           <h2>Conversación</h2>
         </div>
-
         <button
           class="end-button"
           type="button"
           (click)="endConsultation()"
           [disabled]="!conversationId || isLoadingLucy || isEndingLucy">
-
           <span class="end-icon">■</span>
           {{ isEndingLucy ? 'Finalizando...' : 'Finalizar' }}
-
         </button>
-
       </div>
 
-
-      <!-- TRANSCRIPT -->
       <div class="transcript" #transcriptContainer>
-
         @for (message of messages; track message.id) {
-
           <div
             class="message"
             [class.student-message]="message.sender === 'student'"
             [class.patient-message]="message.sender === 'patient'">
-
             <div class="message-avatar">
-
               @if (message.sender === 'student') {
                 <span>ME</span>
               } @else {
                 <span>PA</span>
               }
-
             </div>
-
             <div class="message-content">
-
               <span class="message-author">
                 {{ message.sender === 'student' ? 'Tú' : patient.name }}
               </span>
-
               <p>{{ message.text }}</p>
-
-              <span class="message-time">
-                {{ message.time }}
-              </span>
-
+              <span class="message-time">{{ message.time }}</span>
             </div>
-
           </div>
-
         }
 
-        <!-- Processing state -->
         @if (isProcessing) {
-
           <div class="typing-indicator">
-
-            <div class="message-avatar patient-avatar">
-              PA
-            </div>
-
-            <div class="typing-bubble">
-
-              <span></span>
-              <span></span>
-              <span></span>
-
-            </div>
-
+            <div class="message-avatar patient-avatar">PA</div>
+            <div class="typing-bubble"><span></span><span></span><span></span></div>
           </div>
-
         }
-
       </div>
 
-
-      <!-- CURRENT CAPTION -->
       <div class="caption-container">
-
-        <span class="caption-label">
-          SUBTÍTULOS
-        </span>
-
-        <p>
-          {{ currentCaption }}
-        </p>
-
+        <span class="caption-label">SUBTÍTULOS</span>
+        <p>{{ currentCaption }}</p>
       </div>
 
-
-      <!-- INPUT AREA -->
       <div class="input-section">
-
         <div class="input-wrapper">
-
           <button
             type="button"
             class="mic-button"
             [class.recording]="isRecording"
-            (click)="toggleRecording()">
-
+            (click)="toggleRecording()"
+            [disabled]="!isJoined || isEndingLucy">
             @if (isRecording) {
               <span class="recording-icon"></span>
             } @else {
               <span class="mic-icon">🎙</span>
             }
-
           </button>
-
 
           <input
             type="text"
             [(ngModel)]="userInput"
             (keyup.enter)="sendMessage()"
             placeholder="Escribe tu pregunta..."
-            [disabled]="isRecording"
+            [disabled]="!isJoined || isEndingLucy"
+            autocomplete="off"
           />
-
 
           <button
             type="button"
             class="send-button"
             (click)="sendMessage()"
-            [disabled]="!userInput.trim()">
-
+            [disabled]="!isJoined || isEndingLucy || !userInput.trim()">
             ↑
-
           </button>
-
         </div>
 
-
         <div class="input-options">
-
           <button
             type="button"
             class="input-option"
-            (click)="toggleRecording()">
-
-            🎙
-            {{ isRecording ? 'Detener grabación' : 'Hablar' }}
-
+            (click)="toggleRecording()"
+            [disabled]="!isJoined || isEndingLucy">
+            🎙 {{ isRecording ? 'Detener micrófono' : 'Hablar' }}
           </button>
-
           <span class="separator">o</span>
-
           <span class="keyboard-hint">
-            Escribe y presiona Enter
+            Puedes escribir durante toda la anamnesis y presionar Enter
           </span>
-
         </div>
-
       </div>
-
     </section>
-
   </main>
 
-  <!-- RESULTADOS DE LA EVALUACIÓN -->
   @if (isEvaluating) {
     <section class="evaluation-panel">
       <h2>Evaluando anamnesis</h2>
@@ -291,18 +188,14 @@
 
   @if (evaluation) {
     <section class="evaluation-panel">
-
       <div class="evaluation-header">
         <div>
           <span class="section-label">RESULTADO</span>
           <h2>Evaluación de tu anamnesis</h2>
         </div>
-
         <div class="evaluation-score">
           <strong>{{ evaluation.porcentaje | number:'1.0-1' }}%</strong>
-          <span>
-            {{ evaluation.puntaje_total }} / {{ evaluation.puntaje_maximo }} puntos
-          </span>
+          <span>{{ evaluation.puntaje_total }} / {{ evaluation.puntaje_maximo }} puntos</span>
         </div>
       </div>
 
@@ -313,68 +206,37 @@
 
       <div class="evaluation-criteria">
         <h3>Evaluación por criterios</h3>
-
         @for (criterio of evaluation.criterios; track criterio.id) {
           <article class="criterion-item">
             <div class="criterion-header">
               <strong>{{ criterio.nombre }}</strong>
-              <span>
-                {{ criterio.puntaje }} / {{ criterio.puntaje_maximo }}
-              </span>
+              <span>{{ criterio.puntaje }} / {{ criterio.puntaje_maximo }}</span>
             </div>
-
             <p>{{ criterio.justificacion }}</p>
           </article>
         }
       </div>
 
       <div class="evaluation-lists">
-
         <div>
           <h3>Fortalezas</h3>
-
           @if (evaluation.fortalezas.length > 0) {
-            <ul>
-              @for (fortaleza of evaluation.fortalezas; track $index) {
-                <li>{{ fortaleza }}</li>
-              }
-            </ul>
-          } @else {
-            <p>No se registraron fortalezas.</p>
-          }
+            <ul>@for (fortaleza of evaluation.fortalezas; track $index) { <li>{{ fortaleza }}</li> }</ul>
+          } @else { <p>No se registraron fortalezas.</p> }
         </div>
-
         <div>
           <h3>Aspectos por mejorar</h3>
-
           @if (evaluation.aspectos_por_mejorar.length > 0) {
-            <ul>
-              @for (aspecto of evaluation.aspectos_por_mejorar; track $index) {
-                <li>{{ aspecto }}</li>
-              }
-            </ul>
-          } @else {
-            <p>No se registraron aspectos por mejorar.</p>
-          }
+            <ul>@for (aspecto of evaluation.aspectos_por_mejorar; track $index) { <li>{{ aspecto }}</li> }</ul>
+          } @else { <p>No se registraron aspectos por mejorar.</p> }
         </div>
-
         <div>
           <h3>Preguntas omitidas</h3>
-
           @if (evaluation.preguntas_omitidas.length > 0) {
-            <ul>
-              @for (pregunta of evaluation.preguntas_omitidas; track $index) {
-                <li>{{ pregunta }}</li>
-              }
-            </ul>
-          } @else {
-            <p>No se identificaron preguntas omitidas.</p>
-          }
+            <ul>@for (pregunta of evaluation.preguntas_omitidas; track $index) { <li>{{ pregunta }}</li> }</ul>
+          } @else { <p>No se identificaron preguntas omitidas.</p> }
         </div>
-
       </div>
-
     </section>
   }
-
 </div>
